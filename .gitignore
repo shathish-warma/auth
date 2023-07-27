@@ -1,0 +1,10 @@
+# Node.js / Express
+node_modules/
+.env
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# macOS specific files
+.DS_Store
