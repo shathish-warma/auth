@@ -1,3 +1,5 @@
+// app.js
+
 const express = require("express");
 const app = express();
 const bodyParser = require('body-parser');
@@ -8,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const auth = require("./auth");
 const rateLimit = require("express-rate-limit");
 const { body, validationResult } = require('express-validator');
+const secretKey = require("./generateSecretKey"); // Import the secret key
 
 // body parser configuration
 app.use(bodyParser.json());
@@ -20,7 +23,9 @@ app.get("/free-endpoint", (request, response) => {
 
 // Authentication endpoint with authentication middleware
 app.get("/auth-endpoint", auth, (request, response) => {
-  response.json({ message: "You are authorized to access me" });
+  // Since the auth middleware has already executed, the user details are available in the request object
+  const { userId } = request.user;
+  response.json({ message: "You are authorized to access me", userId });
 });
 
 // Rate limiting: Limit requests from the same IP to 100 requests per 15 minutes
@@ -117,6 +122,7 @@ app.post(
         });
       });
   }
+  
 );
 
 // execute database connection

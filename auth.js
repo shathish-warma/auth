@@ -1,24 +1,33 @@
+// auth.js
+
 const jwt = require("jsonwebtoken");
+const secretKey = require("./generateSecretKey"); // Import the secret key
 
 module.exports = async (request, response, next) => {
+  console.log("Auth middleware executed!");
   try {
     // Get the token from the authorization header
-    const token = await request.headers.authorization.split(" ")[1];
+    const authorizationHeader = request.headers.authorization;
+    if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
+      throw new Error("Invalid token! Authentication failed.");
+    }
 
-    // Verify if the token matches the supposed origin
-    const decodedToken = await jwt.verify(token, "RANDOM-TOKEN");
+    const token = authorizationHeader.split(" ")[1];
 
-    // Retrieve the user details of the logged-in user
-    const user = await decodedToken;
+    // Verify the token
+    const decodedToken = jwt.verify(token, 'your-secret-key');
 
-    // Pass the user down to the endpoints
-    request.user = user;
+    // Retrieve the user details from the token payload
+    const userId = decodedToken.userId;
 
-    // Pass down functionality to the endpoint
+    // Attach the user details to the request object for use in other endpoints
+    request.user = { userId };
+
+    // Continue to the next middleware or the endpoint handler
     next();
   } catch (error) {
     response.status(401).json({
-      error: "Invalid request! Authentication failed.",
+      error: error.message || "Invalid request! Authentication failed.",
     });
   }
 };
