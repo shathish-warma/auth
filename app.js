@@ -7,6 +7,7 @@ const User = require("./db/userModel");
 const jwt = require("jsonwebtoken");
 const auth = require("./auth");
 const rateLimit = require("express-rate-limit");
+const { body, validationResult } = require('express-validator');
 
 // body parser configuration
 app.use(bodyParser.json());
@@ -30,7 +31,6 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Input validation for register endpoint
-const { body, validationResult } = require('express-validator');
 app.post(
   "/register",
   body('email').isEmail().withMessage('Invalid email address'),
@@ -72,6 +72,53 @@ app.post(
       });
   });
 
-// execute database connection 
+// Input validation for login endpoint
+app.post(
+  "/login",
+  body('email').isEmail().withMessage('Invalid email address'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+      return response.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password } = request.body;
+
+    // Find the user in the database by their email
+    User.findOne({ email })
+      .then((user) => {
+        if (!user) {
+          return response.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        // Compare the provided password with the hashed password from the database
+        bcrypt.compare(password, user.password)
+          .then((isMatch) => {
+            if (!isMatch) {
+              return response.status(401).json({ message: 'Invalid email or password' });
+            }
+
+            // If the password matches, generate a JWT and send it back to the client
+            const token = jwt.sign({ userId: user._id }, 'your-secret-key', { expiresIn: '1h' });
+            response.json({ message: 'Login successful', token });
+          })
+          .catch((error) => {
+            response.status(500).send({
+              message: 'Error comparing passwords',
+              error,
+            });
+          });
+      })
+      .catch((error) => {
+        response.status(500).send({
+          message: 'Error finding the user',
+          error,
+        });
+      });
+  }
+);
+
+// execute database connection
 dbConnect();
 module.exports = app;
